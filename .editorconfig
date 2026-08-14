@@ -1,0 +1,21 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{fs,fsi,fsx}]
+indent_size = 4
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{json,yaml,yml,xml,props,targets,fsproj,csproj,sln}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

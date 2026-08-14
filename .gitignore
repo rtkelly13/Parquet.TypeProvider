@@ -1,0 +1,36 @@
+# Visual Studio / Rider / Ionide build artifacts
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rtifacts/
+BenchmarkDotNet.Artifacts/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+.ionide/
+*.fsx.lock
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Logs & Traces
+*.log
+*.nettrace
+*.speedscope.json
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/

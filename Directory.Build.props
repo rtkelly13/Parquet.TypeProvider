@@ -1,0 +1,31 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.0.1</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!-- Package Metadata & SourceLink -->
+  <PropertyGroup>
+    <Authors>Ryan Kelly</Authors>
+    <Copyright>Copyright (c) 2026 Ryan Kelly</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/rtkelly13/Parquet.TypeProvider</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rtkelly13/Parquet.TypeProvider.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>parquet;fsharp;typeprovider;data;performance;dotnet</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="\" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+</Project>
