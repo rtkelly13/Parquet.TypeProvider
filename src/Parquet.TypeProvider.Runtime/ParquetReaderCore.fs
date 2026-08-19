@@ -240,8 +240,22 @@ module ParquetReaderCore =
                 use groupReader = reader.OpenRowGroupReader(i)
                 let rowCount = int groupReader.RowCount
                 let! colData = readColumnDataAsync groupReader field rowCount
-                let typedData = colData :?> 'T[]
-                Array.Copy(typedData, 0, result, offset, rowCount)
+                
+                match box colData with
+                | :? ('T[]) as typedData ->
+                    Array.Copy(typedData, 0, result, offset, rowCount)
+                | _ ->
+                    for r = 0 to rowCount - 1 do
+                        let v = colData.GetValue(r)
+                        if not (obj.ReferenceEquals(v, null)) then
+                            let vType = v.GetType()
+                            if vType.IsGenericType && vType.GetGenericTypeDefinition() = typedefof<Nullable<_>> then
+                                let hasVal = vType.GetProperty("HasValue").GetValue(v) :?> bool
+                                if hasVal then
+                                    result.[offset + r] <- vType.GetProperty("Value").GetValue(v) :?> 'T
+                            else
+                                result.[offset + r] <- v :?> 'T
+
                 offset <- offset + rowCount
 
             return result
