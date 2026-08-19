@@ -1,0 +1,118 @@
+name: Release & Publish NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.0.1 or 1.0.0-rc.1)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Pack and verify only — do not publish to NuGet or push tag'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish Packages to NuGet.org
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse and validate SemVer input
+        id: version
+        run: |
+          python3 -c "
+          import sys, re
+          raw = sys.argv[1]
+          ver = raw[1:] if raw.startswith('v') else raw
+          pattern = r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+          m = re.match(pattern, ver)
+          if not m:
+              print(f'FAIL: \"{raw}\" is not a valid SemVer 2.0.0 version string', file=sys.stderr)
+              sys.exit(1)
+          is_prerelease = 'true' if m.group(4) is not None else 'false'
+          with open(sys.argv[2], 'a') as f:
+              f.write(f'version={ver}\n')
+              f.write(f'tag=v{ver}\n')
+              f.write(f'is_prerelease={is_prerelease}\n')
+          print(f'SemVer OK: version={ver}, is_prerelease={is_prerelease}')
+          " "${{ inputs.version }}" "$GITHUB_OUTPUT"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore Parquet.TypeProvider.sln
+
+      - name: Generate Python Test Datasets (PyArrow)
+        run: uv run --with pyarrow scripts/generate_test_data.py
+
+      - name: Build Solution (Release)
+        run: |
+          dotnet build Parquet.TypeProvider.sln --configuration Release --no-restore \
+            -warnaserror -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Run Tests
+        run: dotnet test Parquet.TypeProvider.sln --configuration Release --no-build
+
+      - name: Pack All Packages
+        run: |
+          dotnet pack Parquet.TypeProvider.sln --configuration Release --no-build \
+            --output ./nupkgs -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Verify Package Layout
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          cd nupkgs
+          pkg="Parquet.TypeProvider.${version}.nupkg"
+
+          test -f "$pkg" || { echo "FAIL: $pkg not produced"; ls -la; exit 1; }
+
+          unzip -Z1 "$pkg" | grep -q '^lib/net9\.0/Parquet\.TypeProvider\.Runtime\.dll$' \
+            || { echo "FAIL: Runtime assembly missing from lib/net9.0/"; exit 1; }
+
+          unzip -Z1 "$pkg" | grep -q '^typeproviders/fsharp41/net9\.0/Parquet\.TypeProvider\.DesignTime\.dll$' \
+            || { echo "FAIL: DesignTime assembly missing from typeproviders/fsharp41/net9.0/"; exit 1; }
+
+          echo "Package layout OK."
+
+      - name: Publish to NuGet.org
+        if: ${{ !inputs.dry_run }}
+        run: |
+          dotnet nuget push ./nupkgs/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Create Git Tag & GitHub Release
+        if: ${{ !inputs.dry_run }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          files: ./nupkgs/*.nupkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -8,6 +8,13 @@ x86/
 [Aa]rtifacts/
 BenchmarkDotNet.Artifacts/
 
+# Local worktrees and tasks
+/temp/
+TODO.md
+
+# Sample generated parquet files
+samples/*.parquet
+
 # User-specific files
 *.rsuser
 *.suo
