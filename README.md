@@ -4,6 +4,7 @@
 
 [![Build & Test Status](https://github.com/rtkelly13/Parquet.TypeProvider/actions/workflows/ci.yml/badge.svg)](https://github.com/rtkelly13/Parquet.TypeProvider/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Parquet.TypeProvider.svg)](https://www.nuget.org/packages/Parquet.TypeProvider)
+[![AI Assisted](https://img.shields.io/badge/development-AI%20assisted-792ee5.svg?logo=openai&logoColor=white)](AI_POLICY.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/rtkelly13/Parquet.TypeProvider/blob/main/LICENSE)
 
 A high-performance **F# Type Provider** for Apache Parquet files, powered by [Parquet.Net](https://github.com/aloneguid/parquet-dotnet) low-level primitives.
@@ -44,7 +45,17 @@ Multi-scale benchmarks against reflection-based deserializers (1K, 10K, 100K, 1M
 1. **Schema-First Type Safety**: Instant IntelliSense and compile-time verification directly from `.parquet` sample files or schema definitions.
 2. **Zero-Reflection Performance**: Backed by `Parquet.Net` v6 low-level column chunk readers and efficient array buffers.
 3. **Idiomatic F# Experience**: First-class handling of `option<'T>`, standard F# primitives, timestamps, decimals, and records.
-4. **Streaming & Large Data Support**: Lazy row group streaming and `IAsyncEnumerable<'Row>` support to process multi-gigabyte datasets without materializing all rows into memory.
+4. **Streaming & Large Data Support**: Lazy row group streaming and `IAsyncEnumerable<'Row>` support via `FSharp.Control.TaskSeq` to process multi-gigabyte datasets without materializing all rows into memory.
+
+---
+
+## 🤖 AI Utilization & Transparency
+
+This project leverages AI-assisted software engineering and agentic workflows for rapid development, test scaffolding, and documentation. 
+
+* **Human Accountability:** The maintainer reviews all architecture, code changes, and pull requests, assuming 100% responsibility for the correctness, stability, and security of all merged code.
+* **Automated Verification:** All features and contributions are validated by automated multi-target test suites (`net8.0` & `net9.0`), local package consumption tests, and BenchmarkDotNet suites.
+* **Community Policy:** For contributor guidelines regarding generative AI tooling, see [**`AI_POLICY.md`**](AI_POLICY.md).
 
 ---
 
@@ -58,6 +69,7 @@ Detailed design documents are located in [`docs/`](docs/):
 - 🔠 [**03 - Parquet to F# Type Mappings**](docs/03-TYPE-MAPPINGS.md): Parquet physical and logical types mapped to the F# type system.
 - 🛠️ [**04 - API Design**](docs/04-API-DESIGN.md): Surface area design for synchronous, async, streaming, and column-oriented access.
 - ⚡ [**05 - Testing & Benchmarking Strategy**](docs/05-TESTING-AND-BENCHMARKS.md): Multi-scale BenchmarkDotNet suite and validation harness.
+- 🏛️ [**07 - FSSF Ecosystem & Dependencies**](docs/07-ECOSYSTEM-AND-DEPENDENCIES.md): Standards for F# Software Foundation dependencies.
 
 ---
 
