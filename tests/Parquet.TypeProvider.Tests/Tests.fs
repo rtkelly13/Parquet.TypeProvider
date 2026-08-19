@@ -3,6 +3,7 @@ namespace Parquet.TypeProvider.Tests
 open System
 open System.IO
 open System.Threading.Tasks
+open FSharp.Control
 open Xunit
 open Parquet
 open Parquet.Schema
@@ -87,19 +88,35 @@ type SchemaAndReaderTests() =
         }
 
     [<Fact>]
-    member _.``ParquetReaderCore extracts contiguous column arrays``() =
+    member _.``ParquetReaderCore streams rows asynchronously via taskSeq``() =
         task {
             let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
             try
                 do! TestHelper.createTestParquetFile tempFile
 
-                let ids = ParquetReaderCore.readColumnArray<int32> tempFile "Id"
+                let stream = ParquetReaderCore.loadFromFileAsync tempFile true
+                let! rows = TaskSeq.toArrayAsync stream
+                Assert.Equal(5, rows.Length)
+                Assert.Equal("Apple", rows.[0].GetTypedValue<string>(1))
+                Assert.Equal("Elderberry", rows.[4].GetTypedValue<string>(1))
+            finally
+                if File.Exists tempFile then File.Delete tempFile
+        }
+
+    [<Fact>]
+    member _.``ParquetReaderCore extracts contiguous column arrays asynchronously``() =
+        task {
+            let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
+            try
+                do! TestHelper.createTestParquetFile tempFile
+
+                let! ids = ParquetReaderCore.readColumnArrayAsync<int32> tempFile "Id"
                 Assert.Equal<int32[]>([| 1; 2; 3; 4; 5 |], ids)
 
-                let names = ParquetReaderCore.readColumnArray<string> tempFile "Name"
+                let! names = ParquetReaderCore.readColumnArrayAsync<string> tempFile "Name"
                 Assert.Equal<string[]>([| "Apple"; "Banana"; "Cherry"; "Date"; "Elderberry" |], names)
 
-                let prices = ParquetReaderCore.readColumnArray<decimal> tempFile "Price"
+                let! prices = ParquetReaderCore.readColumnArrayAsync<decimal> tempFile "Price"
                 Assert.Equal<decimal[]>([| 1.50m; 0.80m; 3.25m; 4.00m; 2.10m |], prices)
             finally
                 if File.Exists tempFile then File.Delete tempFile

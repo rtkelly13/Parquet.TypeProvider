@@ -2,6 +2,8 @@ namespace Parquet.TypeProvider.DesignTime
 
 open System
 open System.Reflection
+open System.Collections.Generic
+open System.Threading.Tasks
 open Microsoft.FSharp.Core.CompilerServices
 open ProviderImplementation.ProvidedTypes
 open Parquet.Schema
@@ -63,7 +65,7 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
 
         generatedType.AddMember(rowType)
 
-        // 4. Generate static 'Load' method: filePath -> seq<Row>
+        // 4. Generate static 'Load' methods: filePath/stream -> seq<Row>
         let loadMethod =
             ProvidedMethod(
                 "Load",
@@ -78,7 +80,6 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
         loadMethod.AddXmlDoc("Loads and iterates rows from a Parquet file.")
         generatedType.AddMember(loadMethod)
 
-        // 5. Generate static 'Load' method: stream -> seq<Row>
         let loadStreamMethod =
             ProvidedMethod(
                 "Load",
@@ -92,6 +93,35 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
             )
         loadStreamMethod.AddXmlDoc("Loads and iterates rows from a readable Parquet stream.")
         generatedType.AddMember(loadStreamMethod)
+
+        // 5. Generate static 'AsyncLoad' methods: filePath/stream -> IAsyncEnumerable<Row>
+        let asyncLoadMethod =
+            ProvidedMethod(
+                "AsyncLoad",
+                [ ProvidedParameter("filePath", typeof<string>) ],
+                typedefof<IAsyncEnumerable<_>>.MakeGenericType(rowType),
+                isStatic = true,
+                invokeCode = (fun args ->
+                    let filePathArg = args.[0]
+                    <@@ ParquetReaderCore.loadFromFileAsync (%%filePathArg: string) preferOption @@>
+                )
+            )
+        asyncLoadMethod.AddXmlDoc("Asynchronously streams rows from a Parquet file as an IAsyncEnumerable sequence.")
+        generatedType.AddMember(asyncLoadMethod)
+
+        let asyncLoadStreamMethod =
+            ProvidedMethod(
+                "AsyncLoad",
+                [ ProvidedParameter("stream", typeof<System.IO.Stream>) ],
+                typedefof<IAsyncEnumerable<_>>.MakeGenericType(rowType),
+                isStatic = true,
+                invokeCode = (fun args ->
+                    let streamArg = args.[0]
+                    <@@ ParquetReaderCore.readRowsStream (%%streamArg: System.IO.Stream) preferOption @@>
+                )
+            )
+        asyncLoadStreamMethod.AddXmlDoc("Asynchronously streams rows from a readable Parquet stream as an IAsyncEnumerable sequence.")
+        generatedType.AddMember(asyncLoadStreamMethod)
 
         // 6. Generate Columns container for direct columnar array access
         let columnsType = ProvidedTypeDefinition("Columns", Some typeof<obj>, isErased = true)
@@ -113,6 +143,21 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                 )
             colMethod.AddXmlDoc($"Extracts the entire {field.Name} column as a contiguous typed array.")
             columnsType.AddMember(colMethod)
+
+            let asyncColMethod =
+                ProvidedMethod(
+                    $"Async{field.Name}",
+                    [ ProvidedParameter("filePath", typeof<string>) ],
+                    typedefof<Task<_>>.MakeGenericType(field.ClrType.MakeArrayType()),
+                    isStatic = true,
+                    invokeCode = (fun args ->
+                        let filePathArg = args.[0]
+                        let fieldName = field.Name
+                        <@@ ParquetReaderCore.readColumnArrayAsync (%%filePathArg: string) fieldName @@>
+                    )
+                )
+            asyncColMethod.AddXmlDoc($"Asynchronously extracts the entire {field.Name} column as a contiguous typed array.")
+            columnsType.AddMember(asyncColMethod)
         )
 
         generatedType.AddMember(columnsType)
