@@ -99,15 +99,25 @@ jobs:
               || { echo "FAIL: DesignTime assembly missing from typeproviders/fsharp41/$tfm/"; exit 1; }
           done
 
-          echo "Package layout OK."
+          echo "Package layout OK for $version."
 
-      - name: Publish to NuGet.org
+      - name: Login to NuGet via OIDC (Trusted Publishing)
         if: ${{ !inputs.dry_run }}
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER || 'rtk_13' }}
+
+      - name: Push to NuGet
+        if: ${{ !inputs.dry_run }}
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           dotnet nuget push ./nupkgs/*.nupkg \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "$NUGET_API_KEY" \
             --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
+            --skip-duplicate \
+            --no-symbols
 
       - name: Create Git Tag & GitHub Release
         if: ${{ !inputs.dry_run }}
