@@ -1,0 +1,98 @@
+name: CI & PR E2E Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job name 'build' is the short, stable identifier that GitHub branch protection matches on.
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore solution dependencies
+        run: dotnet restore Parquet.TypeProvider.sln
+
+      - name: Audit Package Security & Vulnerabilities
+        run: dotnet list package --vulnerable --include-transitive
+
+      - name: Verify Code Formatting
+        run: dotnet format whitespace --verify-no-changes --verbosity diagnostic
+
+      - name: Generate Python Test Datasets (PyArrow)
+        run: uv run --with pyarrow scripts/generate_test_data.py
+
+      - name: Build solution (Release)
+        run: dotnet build Parquet.TypeProvider.sln --configuration Release --no-restore -warnaserror
+
+      - name: Run Full Test Suite with Code Coverage Collection
+        run: dotnet test Parquet.TypeProvider.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Pack All NuGet Packages
+        run: dotnet pack Parquet.TypeProvider.sln --configuration Release --no-build --output ./artifacts
+
+      - name: Verify Package Layout
+        run: |
+          set -euo pipefail
+          cd artifacts
+          pkg=$(ls Parquet.TypeProvider.[0-9]*.nupkg)
+          echo "::group::$pkg contents"; unzip -Z1 "$pkg"; echo "::endgroup::"
+
+          # Verify runtime assembly in lib/
+          unzip -Z1 "$pkg" | grep -q '^lib/net9\.0/Parquet\.TypeProvider\.Runtime\.dll$' \
+            || { echo "FAIL: Runtime assembly missing from lib/net9.0/"; exit 1; }
+
+          # Verify design-time assembly in typeproviders/
+          unzip -Z1 "$pkg" | grep -q '^typeproviders/fsharp41/net9\.0/Parquet\.TypeProvider\.DesignTime\.dll$' \
+            || { echo "FAIL: DesignTime assembly missing from typeproviders/fsharp41/net9.0/"; exit 1; }
+
+          echo "Package layout OK."
+
+      - name: Verify Package Consumption (Local NuGet feed E2E)
+        run: |
+          set -euo pipefail
+          version=$(ls artifacts/Parquet.TypeProvider.[0-9]*.nupkg \
+            | sed -E 's/.*Parquet\.TypeProvider\.([0-9][^/]*)\.nupkg/\1/')
+          echo "Consuming Parquet.TypeProvider $version from local feed"
+          dotnet run --project test/PackageConsumption/PackageConsumption.fsproj \
+            --configuration Release \
+            -p:PackageVersion="$version" \
+            -p:RestorePackagesPath="$RUNNER_TEMP/consumption-packages"
+
+      - name: Upload Test Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: tests/Parquet.TypeProvider.Tests/TestResults/*/coverage.cobertura.xml
+
+      - name: Upload Build & Package Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ./artifacts/*.nupkg
