@@ -16,3 +16,5 @@ Welcome to the technical documentation for `Parquet.TypeProvider`.
    - Multi-scale BenchmarkDotNet suite, binary compatibility verification, and CI automation.
 6. 🧪 [**06 - Testing, Consumption, & F# Language Integration**](06-TESTING-AND-CONSUMPTION-PLAN.md)
    - In-depth plan covering full test coverage, local package consumer testing, F#-bespoke type behaviors, and samples.
+7. 🏛️ [**07 - F# Software Foundation Ecosystem & Dependencies**](07-ECOSYSTEM-AND-DEPENDENCIES.md)
+   - Architectural standards, F# Software Foundation (`fsprojects`) governance, and technical rationale for `FSharp.Control.TaskSeq` and `FSharp.TypeProviders.SDK`.
