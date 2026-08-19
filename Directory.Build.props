@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
     <Version>0.0.1</Version>
+    <!-- Baseline language requirement: F# 6.0+ for native task { ... } and resumable code -->
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
