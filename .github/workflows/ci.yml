@@ -31,10 +31,12 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      - name: Setup .NET SDK
+      - name: Setup .NET SDKs (8.0.x and 9.0.x)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
 
       - name: Restore solution dependencies
         run: dotnet restore Parquet.TypeProvider.sln
@@ -64,26 +66,36 @@ jobs:
           pkg=$(ls Parquet.TypeProvider.[0-9]*.nupkg)
           echo "::group::$pkg contents"; unzip -Z1 "$pkg"; echo "::endgroup::"
 
-          # Verify runtime assembly in lib/
-          unzip -Z1 "$pkg" | grep -q '^lib/net9\.0/Parquet\.TypeProvider\.Runtime\.dll$' \
-            || { echo "FAIL: Runtime assembly missing from lib/net9.0/"; exit 1; }
+          for tfm in net8.0 net9.0; do
+            # Verify runtime assembly in lib/
+            unzip -Z1 "$pkg" | grep -q "^lib/$tfm/Parquet\.TypeProvider\.Runtime\.dll$" \
+              || { echo "FAIL: Runtime assembly missing from lib/$tfm/"; exit 1; }
 
-          # Verify design-time assembly in typeproviders/
-          unzip -Z1 "$pkg" | grep -q '^typeproviders/fsharp41/net9\.0/Parquet\.TypeProvider\.DesignTime\.dll$' \
-            || { echo "FAIL: DesignTime assembly missing from typeproviders/fsharp41/net9.0/"; exit 1; }
+            # Verify design-time assembly in typeproviders/
+            unzip -Z1 "$pkg" | grep -q "^typeproviders/fsharp41/$tfm/Parquet\.TypeProvider\.DesignTime\.dll$" \
+              || { echo "FAIL: DesignTime assembly missing from typeproviders/fsharp41/$tfm/"; exit 1; }
+          done
 
           echo "Package layout OK."
 
-      - name: Verify Package Consumption (Local NuGet feed E2E)
+      - name: Verify Package Consumption (.NET 8 & .NET 9 E2E)
         run: |
           set -euo pipefail
           version=$(ls artifacts/Parquet.TypeProvider.[0-9]*.nupkg \
             | sed -E 's/.*Parquet\.TypeProvider\.([0-9][^/]*)\.nupkg/\1/')
           echo "Consuming Parquet.TypeProvider $version from local feed"
+          
           dotnet run --project test/PackageConsumption/PackageConsumption.fsproj \
+            --framework net8.0 \
             --configuration Release \
             -p:PackageVersion="$version" \
-            -p:RestorePackagesPath="$RUNNER_TEMP/consumption-packages"
+            -p:RestorePackagesPath="$RUNNER_TEMP/consumption-packages-net8"
+
+          dotnet run --project test/PackageConsumption/PackageConsumption.fsproj \
+            --framework net9.0 \
+            --configuration Release \
+            -p:PackageVersion="$version" \
+            -p:RestorePackagesPath="$RUNNER_TEMP/consumption-packages-net9"
 
       - name: Upload Test Coverage Artifacts
         uses: actions/upload-artifact@v4

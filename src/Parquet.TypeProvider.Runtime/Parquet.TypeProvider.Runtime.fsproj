@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>Parquet.TypeProvider</PackageId>
     <Description>A high-performance F# Type Provider for Apache Parquet files, powered by Parquet.Net</Description>
     <NoWarn>$(NoWarn);NU5100</NoWarn>
+    <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net9.0\Parquet.TypeProvider.DesignTime.dll" PackagePath="typeproviders\fsharp41\net9.0" Pack="true" Visible="false" />
+    <None Include="..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net8.0\Parquet.TypeProvider.DesignTime.dll" PackagePath="typeproviders\fsharp41\net8.0" Pack="true" Visible="false" Condition="Exists('..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net8.0\Parquet.TypeProvider.DesignTime.dll')" />
+    <None Include="..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net8.0\FSharp.TypeProviders.SDK.dll" PackagePath="typeproviders\fsharp41\net8.0" Pack="true" Visible="false" Condition="Exists('..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net8.0\FSharp.TypeProviders.SDK.dll')" />
+    <None Include="..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net9.0\Parquet.TypeProvider.DesignTime.dll" PackagePath="typeproviders\fsharp41\net9.0" Pack="true" Visible="false" Condition="Exists('..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net9.0\Parquet.TypeProvider.DesignTime.dll')" />
     <None Include="..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net9.0\FSharp.TypeProviders.SDK.dll" PackagePath="typeproviders\fsharp41\net9.0" Pack="true" Visible="false" Condition="Exists('..\Parquet.TypeProvider.DesignTime\bin\$(Configuration)\net9.0\FSharp.TypeProviders.SDK.dll')" />
   </ItemGroup>
 

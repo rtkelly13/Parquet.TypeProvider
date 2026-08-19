@@ -26,14 +26,36 @@ type ParquetRow(batch: ParquetColumnBatch, rowIndex: int) =
     member _.GetValue(colIndex: int) : obj =
         if colIndex < 0 || colIndex >= batch.Columns.Length then
             raise (IndexOutOfRangeException $"Column index {colIndex} is out of bounds.")
-        batch.Columns.[colIndex].GetValue(rowIndex)
+        let arr = batch.Columns.[colIndex]
+        let v = arr.GetValue(rowIndex)
+        if obj.ReferenceEquals(v, null) then null
+        else
+            let vType = v.GetType()
+            if vType.IsGenericType && vType.GetGenericTypeDefinition() = typedefof<Nullable<_>> then
+                let hasVal = vType.GetProperty("HasValue").GetValue(v) :?> bool
+                if hasVal then vType.GetProperty("Value").GetValue(v)
+                else null
+            else
+                v
 
     /// Retrieves a strongly-typed column value by 0-based column index.
     member this.GetTypedValue<'T>(colIndex: int) : 'T =
         if colIndex < 0 || colIndex >= batch.Columns.Length then
             raise (IndexOutOfRangeException $"Column index {colIndex} is out of bounds.")
-        let arr = batch.Columns.[colIndex] :?> 'T[]
-        arr.[rowIndex]
+        let arr = batch.Columns.[colIndex]
+        match box arr with
+        | :? ('T[]) as typedArr -> typedArr.[rowIndex]
+        | _ ->
+            let raw = arr.GetValue(rowIndex)
+            if obj.ReferenceEquals(raw, null) then Unchecked.defaultof<'T>
+            else
+                let rawType = raw.GetType()
+                if rawType.IsGenericType && rawType.GetGenericTypeDefinition() = typedefof<Nullable<_>> then
+                    let hasVal = rawType.GetProperty("HasValue").GetValue(raw) :?> bool
+                    if hasVal then rawType.GetProperty("Value").GetValue(raw) :?> 'T
+                    else Unchecked.defaultof<'T>
+                else
+                    raw :?> 'T
 
     /// Retrieves an optional typed column value by 0-based column index.
     member this.GetOptionalValue<'T>(colIndex: int) : 'T option =
@@ -45,7 +67,16 @@ type ParquetRow(batch: ParquetColumnBatch, rowIndex: int) =
         | _ ->
             let raw = arr.GetValue(rowIndex)
             if obj.ReferenceEquals(raw, null) then None
-            else Some (raw :?> 'T)
+            else
+                let rawType = raw.GetType()
+                if rawType.IsGenericType && rawType.GetGenericTypeDefinition() = typedefof<Nullable<_>> then
+                    let hasVal = rawType.GetProperty("HasValue").GetValue(raw) :?> bool
+                    if hasVal then
+                        let v = rawType.GetProperty("Value").GetValue(raw) :?> 'T
+                        Some v
+                    else None
+                else
+                    Some (raw :?> 'T)
 
     member this.Display =
         let fields =

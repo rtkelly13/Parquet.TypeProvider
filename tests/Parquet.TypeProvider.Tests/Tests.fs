@@ -123,6 +123,49 @@ type SchemaAndReaderTests() =
         }
 
     [<Fact>]
+    member _.``ParquetReaderCore decodes all rich types from PyArrow``() =
+        let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
+        let pyarrowFile = Path.Combine(dataDir, "pyarrow_all_types.parquet")
+        if File.Exists pyarrowFile then
+            let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
+            Assert.Equal(3, rows.Length)
+
+            let r0 = rows.[0]
+            Assert.Equal(100, r0.GetTypedValue<int32>(0))
+            Assert.Equal(10000000000L, r0.GetTypedValue<int64>(1))
+            Assert.Equal(1.5f, r0.GetTypedValue<float32>(2))
+            Assert.Equal(10.12345, r0.GetTypedValue<double>(3))
+            Assert.Equal(true, r0.GetTypedValue<bool>(4))
+            Assert.Equal("Red", r0.GetTypedValue<string>(5))
+            Assert.Equal(123.45m, r0.GetTypedValue<decimal>(6))
+
+    [<Fact>]
+    member _.``ParquetReaderCore streams multi-rowgroup dataset sequentially via taskSeq``() =
+        task {
+            let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
+            let pyarrowFile = Path.Combine(dataDir, "pyarrow_multi_rowgroup.parquet")
+            if File.Exists pyarrowFile then
+                let stream = ParquetReaderCore.loadFromFileAsync pyarrowFile false
+                let! rows = TaskSeq.toArrayAsync stream
+                Assert.Equal(1000, rows.Length)
+                Assert.Equal(0, rows.[0].GetTypedValue<int32>(0))
+                Assert.Equal(999, rows.[999].GetTypedValue<int32>(0))
+
+                let! metricCol = ParquetReaderCore.readColumnArrayAsync<double> pyarrowFile "metric"
+                Assert.Equal(1000, metricCol.Length)
+                Assert.Equal(0.0, metricCol.[0])
+                Assert.Equal(999.0 * 1.5, metricCol.[999])
+        }
+
+    [<Fact>]
+    member _.``ParquetReaderCore handles empty dataset gracefully``() =
+        let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
+        let pyarrowFile = Path.Combine(dataDir, "pyarrow_empty.parquet")
+        if File.Exists pyarrowFile then
+            let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
+            Assert.Empty(rows)
+
+    [<Fact>]
     member _.``ParquetReaderCore can ingest PyArrow generated datasets``() =
         let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
         let pyarrowFile = Path.Combine(dataDir, "pyarrow_nullables.parquet")
