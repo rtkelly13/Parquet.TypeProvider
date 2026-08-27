@@ -11,7 +11,11 @@ open Parquet.TypeProvider
 
 [<TypeProvider>]
 type ParquetTypeProvider(config: TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces(config, assemblyReplacementMap = [("Parquet.TypeProvider.DesignTime", "Parquet.TypeProvider.Runtime")])
+    inherit
+        TypeProviderForNamespaces(
+            config,
+            assemblyReplacementMap = [ ("Parquet.TypeProvider.DesignTime", "Parquet.TypeProvider.Runtime") ]
+        )
 
     let asm = Assembly.GetExecutingAssembly()
     let ns = "Parquet.TypeProvider"
@@ -21,20 +25,25 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
         let preferOption = args.[1] :?> bool
 
         let resolvedPath =
-            if System.IO.Path.IsPathRooted(samplePath) then samplePath
-            else System.IO.Path.Combine(config.ResolutionFolder, samplePath)
+            if System.IO.Path.IsPathRooted(samplePath) then
+                samplePath
+            else
+                System.IO.Path.Combine(config.ResolutionFolder, samplePath)
 
         if not (System.IO.File.Exists(resolvedPath)) then
             failwithf "Sample Parquet file '%s' was not found." resolvedPath
 
         // 1. Extract schema data fields from sample
-        let fields = ParquetReaderCore.readSchemaFieldsFromFile(resolvedPath)
+        let fields = ParquetReaderCore.readSchemaFieldsFromFile (resolvedPath)
 
         // 2. Generate root provided type
-        let generatedType = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased = true)
+        let generatedType =
+            ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, isErased = true)
 
         // 3. Generate inner 'Row' type
-        let rowType = ProvidedTypeDefinition("Row", Some typeof<ParquetRow>, isErased = true)
+        let rowType =
+            ProvidedTypeDefinition("Row", Some typeof<ParquetRow>, isErased = true)
+
         rowType.AddXmlDoc("Represents a strongly-typed row in the Parquet dataset.")
 
         // Add properties to 'Row'
@@ -51,17 +60,18 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                     field.Name,
                     propType,
                     isStatic = false,
-                    getterCode = (fun args ->
-                        let rowInstance = args.[0]
-                        if preferOption && field.IsNullable then
-                            <@@ (%%rowInstance: ParquetRow).GetOptionalValue(idx) @@>
-                        else
-                            <@@ (%%rowInstance: ParquetRow).GetValue(idx) @@>
-                    )
+                    getterCode =
+                        (fun args ->
+                            let rowInstance = args.[0]
+
+                            if preferOption && field.IsNullable then
+                                <@@ (%%rowInstance: ParquetRow).GetOptionalValue(idx) @@>
+                            else
+                                <@@ (%%rowInstance: ParquetRow).GetValue(idx) @@>)
                 )
+
             prop.AddXmlDoc($"Gets the {field.Name} column value.")
-            rowType.AddMember(prop)
-        )
+            rowType.AddMember(prop))
 
         generatedType.AddMember(rowType)
 
@@ -72,11 +82,12 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                 [ ProvidedParameter("filePath", typeof<string>) ],
                 typedefof<seq<_>>.MakeGenericType(rowType),
                 isStatic = true,
-                invokeCode = (fun args ->
-                    let filePathArg = args.[0]
-                    <@@ ParquetReaderCore.loadFromFile (%%filePathArg: string) preferOption @@>
-                )
+                invokeCode =
+                    (fun args ->
+                        let filePathArg = args.[0]
+                        <@@ ParquetReaderCore.loadFromFile (%%filePathArg: string) preferOption @@>)
             )
+
         loadMethod.AddXmlDoc("Loads and iterates rows from a Parquet file.")
         generatedType.AddMember(loadMethod)
 
@@ -86,11 +97,12 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                 [ ProvidedParameter("stream", typeof<System.IO.Stream>) ],
                 typedefof<seq<_>>.MakeGenericType(rowType),
                 isStatic = true,
-                invokeCode = (fun args ->
-                    let streamArg = args.[0]
-                    <@@ ParquetReaderCore.readRows (%%streamArg: System.IO.Stream) preferOption @@>
-                )
+                invokeCode =
+                    (fun args ->
+                        let streamArg = args.[0]
+                        <@@ ParquetReaderCore.readRows (%%streamArg: System.IO.Stream) preferOption @@>)
             )
+
         loadStreamMethod.AddXmlDoc("Loads and iterates rows from a readable Parquet stream.")
         generatedType.AddMember(loadStreamMethod)
 
@@ -101,11 +113,12 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                 [ ProvidedParameter("filePath", typeof<string>) ],
                 typedefof<IAsyncEnumerable<_>>.MakeGenericType(rowType),
                 isStatic = true,
-                invokeCode = (fun args ->
-                    let filePathArg = args.[0]
-                    <@@ ParquetReaderCore.loadFromFileAsync (%%filePathArg: string) preferOption @@>
-                )
+                invokeCode =
+                    (fun args ->
+                        let filePathArg = args.[0]
+                        <@@ ParquetReaderCore.loadFromFileAsync (%%filePathArg: string) preferOption @@>)
             )
+
         asyncLoadMethod.AddXmlDoc("Asynchronously streams rows from a Parquet file as an IAsyncEnumerable sequence.")
         generatedType.AddMember(asyncLoadMethod)
 
@@ -115,16 +128,22 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                 [ ProvidedParameter("stream", typeof<System.IO.Stream>) ],
                 typedefof<IAsyncEnumerable<_>>.MakeGenericType(rowType),
                 isStatic = true,
-                invokeCode = (fun args ->
-                    let streamArg = args.[0]
-                    <@@ ParquetReaderCore.readRowsStream (%%streamArg: System.IO.Stream) preferOption @@>
-                )
+                invokeCode =
+                    (fun args ->
+                        let streamArg = args.[0]
+                        <@@ ParquetReaderCore.readRowsStream (%%streamArg: System.IO.Stream) preferOption @@>)
             )
-        asyncLoadStreamMethod.AddXmlDoc("Asynchronously streams rows from a readable Parquet stream as an IAsyncEnumerable sequence.")
+
+        asyncLoadStreamMethod.AddXmlDoc(
+            "Asynchronously streams rows from a readable Parquet stream as an IAsyncEnumerable sequence."
+        )
+
         generatedType.AddMember(asyncLoadStreamMethod)
 
         // 6. Generate Columns container for direct columnar array access
-        let columnsType = ProvidedTypeDefinition("Columns", Some typeof<obj>, isErased = true)
+        let columnsType =
+            ProvidedTypeDefinition("Columns", Some typeof<obj>, isErased = true)
+
         columnsType.AddXmlDoc("Provides direct zero-allocation columnar array extractions.")
 
         fields
@@ -135,12 +154,13 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                     [ ProvidedParameter("filePath", typeof<string>) ],
                     field.ClrType.MakeArrayType(),
                     isStatic = true,
-                    invokeCode = (fun args ->
-                        let filePathArg = args.[0]
-                        let fieldName = field.Name
-                        <@@ ParquetReaderCore.readColumnArray (%%filePathArg: string) fieldName @@>
-                    )
+                    invokeCode =
+                        (fun args ->
+                            let filePathArg = args.[0]
+                            let fieldName = field.Name
+                            <@@ ParquetReaderCore.readColumnArray (%%filePathArg: string) fieldName @@>)
                 )
+
             colMethod.AddXmlDoc($"Extracts the entire {field.Name} column as a contiguous typed array.")
             columnsType.AddMember(colMethod)
 
@@ -150,26 +170,29 @@ type ParquetTypeProvider(config: TypeProviderConfig) as this =
                     [ ProvidedParameter("filePath", typeof<string>) ],
                     typedefof<Task<_>>.MakeGenericType(field.ClrType.MakeArrayType()),
                     isStatic = true,
-                    invokeCode = (fun args ->
-                        let filePathArg = args.[0]
-                        let fieldName = field.Name
-                        <@@ ParquetReaderCore.readColumnArrayAsync (%%filePathArg: string) fieldName @@>
-                    )
+                    invokeCode =
+                        (fun args ->
+                            let filePathArg = args.[0]
+                            let fieldName = field.Name
+                            <@@ ParquetReaderCore.readColumnArrayAsync (%%filePathArg: string) fieldName @@>)
                 )
-            asyncColMethod.AddXmlDoc($"Asynchronously extracts the entire {field.Name} column as a contiguous typed array.")
-            columnsType.AddMember(asyncColMethod)
-        )
+
+            asyncColMethod.AddXmlDoc(
+                $"Asynchronously extracts the entire {field.Name} column as a contiguous typed array."
+            )
+
+            columnsType.AddMember(asyncColMethod))
 
         generatedType.AddMember(columnsType)
 
         generatedType
 
-    let providerType = ProvidedTypeDefinition(asm, ns, "ParquetProvider", Some typeof<obj>, isErased = true)
+    let providerType =
+        ProvidedTypeDefinition(asm, ns, "ParquetProvider", Some typeof<obj>, isErased = true)
+
     let staticParams =
-        [
-            ProvidedStaticParameter("Sample", typeof<string>)
-            ProvidedStaticParameter("PreferOption", typeof<bool>, true)
-        ]
+        [ ProvidedStaticParameter("Sample", typeof<string>)
+          ProvidedStaticParameter("PreferOption", typeof<bool>, true) ]
 
     do
         providerType.DefineStaticParameters(staticParams, createTypes)

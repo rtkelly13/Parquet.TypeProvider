@@ -29,10 +29,12 @@ module Program =
         generateSampleFile sampleFile
 
         let rows = ParquetReaderCore.loadFromFile sampleFile false |> Seq.toArray
+
         if rows.Length <> 3 then
             failwithf "Expected 3 rows but got %d" rows.Length
 
         let names = ParquetReaderCore.readColumnArray<string> sampleFile "Name"
+
         if names.Length <> 3 || names.[0] <> "Alpha" then
             failwithf "Unexpected names array: %A" names
 

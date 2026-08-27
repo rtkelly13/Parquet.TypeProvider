@@ -14,12 +14,10 @@ open Parquet.TypeProvider
 
 [<CLIMutable>]
 type CustomerRecord =
-    {
-        mutable Id: int32
-        mutable Name: string
-        mutable Balance: decimal
-        mutable IsActive: bool
-    }
+    { mutable Id: int32
+      mutable Name: string
+      mutable Balance: decimal
+      mutable IsActive: bool }
 
 [<MemoryDiagnoser>]
 [<Orderer(SummaryOrderPolicy.FastestToSlowest)>]
@@ -71,8 +69,10 @@ type DeserializationBenchmark() =
     member this.ParquetTypeProvider_RowSeq() =
         let rows = ParquetReaderCore.loadFromFile tempFile false
         let mutable count = 0
+
         for r in rows do
             count <- count + 1
+
         count
 
     [<Benchmark>]
