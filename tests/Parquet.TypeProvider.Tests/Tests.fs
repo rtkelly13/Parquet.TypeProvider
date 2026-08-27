@@ -44,6 +44,7 @@ type SchemaAndReaderTests() =
     member _.``ParquetReaderCore can read schema fields accurately``() =
         task {
             let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
+
             try
                 do! TestHelper.createTestParquetFile tempFile
 
@@ -58,13 +59,15 @@ type SchemaAndReaderTests() =
                 Assert.Equal("Description", fields.[3].Name)
                 Assert.True(fields.[3].IsNullable)
             finally
-                if File.Exists tempFile then File.Delete tempFile
+                if File.Exists tempFile then
+                    File.Delete tempFile
         }
 
     [<Fact>]
     member _.``ParquetReaderCore reads rows and respects options correctly``() =
         task {
             let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
+
             try
                 do! TestHelper.createTestParquetFile tempFile
 
@@ -84,13 +87,15 @@ type SchemaAndReaderTests() =
                 Assert.Equal("Banana", r1.GetTypedValue<string>(1))
                 Assert.Equal(None, r1.GetOptionalValue<string>(3))
             finally
-                if File.Exists tempFile then File.Delete tempFile
+                if File.Exists tempFile then
+                    File.Delete tempFile
         }
 
     [<Fact>]
     member _.``ParquetReaderCore streams rows asynchronously via taskSeq``() =
         task {
             let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
+
             try
                 do! TestHelper.createTestParquetFile tempFile
 
@@ -100,13 +105,15 @@ type SchemaAndReaderTests() =
                 Assert.Equal("Apple", rows.[0].GetTypedValue<string>(1))
                 Assert.Equal("Elderberry", rows.[4].GetTypedValue<string>(1))
             finally
-                if File.Exists tempFile then File.Delete tempFile
+                if File.Exists tempFile then
+                    File.Delete tempFile
         }
 
     [<Fact>]
     member _.``ParquetReaderCore extracts contiguous column arrays asynchronously``() =
         task {
             let tempFile = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.parquet")
+
             try
                 do! TestHelper.createTestParquetFile tempFile
 
@@ -119,13 +126,15 @@ type SchemaAndReaderTests() =
                 let! prices = ParquetReaderCore.readColumnArrayAsync<decimal> tempFile "Price"
                 Assert.Equal<decimal[]>([| 1.50m; 0.80m; 3.25m; 4.00m; 2.10m |], prices)
             finally
-                if File.Exists tempFile then File.Delete tempFile
+                if File.Exists tempFile then
+                    File.Delete tempFile
         }
 
     [<Fact>]
     member _.``ParquetReaderCore decodes all rich types from PyArrow``() =
         let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
         let pyarrowFile = Path.Combine(dataDir, "pyarrow_all_types.parquet")
+
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
             Assert.Equal(3, rows.Length)
@@ -144,6 +153,7 @@ type SchemaAndReaderTests() =
         task {
             let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
             let pyarrowFile = Path.Combine(dataDir, "pyarrow_multi_rowgroup.parquet")
+
             if File.Exists pyarrowFile then
                 let stream = ParquetReaderCore.loadFromFileAsync pyarrowFile false
                 let! rows = TaskSeq.toArrayAsync stream
@@ -161,6 +171,7 @@ type SchemaAndReaderTests() =
     member _.``ParquetReaderCore handles empty dataset gracefully``() =
         let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
         let pyarrowFile = Path.Combine(dataDir, "pyarrow_empty.parquet")
+
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
             Assert.Empty(rows)
@@ -169,6 +180,7 @@ type SchemaAndReaderTests() =
     member _.``ParquetReaderCore can ingest PyArrow generated datasets``() =
         let dataDir = Path.Combine(__SOURCE_DIRECTORY__, "..", "data")
         let pyarrowFile = Path.Combine(dataDir, "pyarrow_nullables.parquet")
+
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile true |> Seq.toArray
             Assert.Equal(4, rows.Length)
@@ -185,19 +197,16 @@ type SchemaAndReaderTests() =
     [<Fact>]
     member _.``ParquetRow structural equality and comparison works for FSharp collections``() =
         let batch1 =
-            {
-                ColumnNames = [| "Id"; "Name" |]
-                ColumnTypes = [| typeof<int>; typeof<string> |]
-                Columns = [| [| 1; 2 |] :> Array; [| "A"; "B" |] :> Array |]
-                RowCount = 2
-            }
+            { ColumnNames = [| "Id"; "Name" |]
+              ColumnTypes = [| typeof<int>; typeof<string> |]
+              Columns = [| [| 1; 2 |] :> Array; [| "A"; "B" |] :> Array |]
+              RowCount = 2 }
+
         let batch2 =
-            {
-                ColumnNames = [| "Id"; "Name" |]
-                ColumnTypes = [| typeof<int>; typeof<string> |]
-                Columns = [| [| 1; 2 |] :> Array; [| "A"; "B" |] :> Array |]
-                RowCount = 2
-            }
+            { ColumnNames = [| "Id"; "Name" |]
+              ColumnTypes = [| typeof<int>; typeof<string> |]
+              Columns = [| [| 1; 2 |] :> Array; [| "A"; "B" |] :> Array |]
+              RowCount = 2 }
 
         let row1A = ParquetRow(batch1, 0)
         let row1B = ParquetRow(batch2, 0)

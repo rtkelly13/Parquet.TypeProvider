@@ -39,14 +39,19 @@ jobs:
             8.0.x
             9.0.x
 
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
       - name: Restore solution dependencies
         run: dotnet restore Parquet.TypeProvider.sln
 
       - name: Audit Package Security & Vulnerabilities
         run: dotnet list Parquet.TypeProvider.sln package --vulnerable --include-transitive
 
-      - name: Verify Code Formatting
-        run: dotnet format whitespace Parquet.TypeProvider.sln --verify-no-changes
+      - name: Verify Code Formatting (Fantomas & Whitespace)
+        run: |
+          dotnet fantomas --check src tests benchmarks samples test
+          dotnet format whitespace Parquet.TypeProvider.sln --verify-no-changes
 
       - name: Generate Python Test Datasets (PyArrow)
         run: uv run --with pyarrow scripts/generate_test_data.py

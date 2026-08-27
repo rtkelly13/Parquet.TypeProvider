@@ -36,6 +36,7 @@ type Telemetry = ParquetProvider<"sample_telemetry.parquet">
 let data = Telemetry.Load(sampleFile)
 
 printfn "=== Reading Telemetry Rows ==="
+
 for row in data do
     printfn $"Device: {row.DeviceId} | Sensor: {row.SensorType} | Temp: {row.Temperature}°C"
 
