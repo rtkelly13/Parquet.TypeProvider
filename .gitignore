@@ -8,6 +8,11 @@ x86/
 [Aa]rtifacts/
 BenchmarkDotNet.Artifacts/
 
+# Documentation generator output
+output/
+_site/
+.fsdocs/
+
 # Local worktrees and tasks
 /temp/
 TODO.md
