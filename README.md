@@ -3,6 +3,7 @@
 # Parquet.TypeProvider
 
 [![Build & Test Status](https://github.com/rtkelly13/Parquet.TypeProvider/actions/workflows/ci.yml/badge.svg)](https://github.com/rtkelly13/Parquet.TypeProvider/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue.svg)](https://rtkelly13.github.io/Parquet.TypeProvider/)
 [![NuGet](https://img.shields.io/nuget/v/Parquet.TypeProvider.svg)](https://www.nuget.org/packages/Parquet.TypeProvider)
 [![AI Assisted](https://img.shields.io/badge/development-AI%20assisted-792ee5.svg?logo=openai&logoColor=white)](AI_POLICY.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/rtkelly13/Parquet.TypeProvider/blob/main/LICENSE)
