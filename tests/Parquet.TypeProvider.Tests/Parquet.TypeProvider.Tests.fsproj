@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Tests.fs" />
+    <Compile Include="PropertyTests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -17,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.4.0" />
     <PackageReference Include="FSharp.Control.TaskSeq" Version="1.1.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Parquet.Net" Version="6.1.0" />
