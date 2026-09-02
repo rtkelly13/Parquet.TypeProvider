@@ -5,6 +5,7 @@ open System.IO
 open System.Threading.Tasks
 open FSharp.Control
 open Xunit
+open Swensen.Unquote
 open Parquet
 open Parquet.Schema
 open Parquet.Data
@@ -49,15 +50,15 @@ type SchemaAndReaderTests() =
                 do! TestHelper.createTestParquetFile tempFile
 
                 let fields = ParquetReaderCore.readSchemaFieldsFromFile tempFile
-                Assert.Equal(4, fields.Length)
-                Assert.Equal("Id", fields.[0].Name)
-                Assert.Equal(typeof<int32>, fields.[0].ClrType)
-                Assert.Equal("Name", fields.[1].Name)
-                Assert.Equal(typeof<string>, fields.[1].ClrType)
-                Assert.Equal("Price", fields.[2].Name)
-                Assert.Equal(typeof<decimal>, fields.[2].ClrType)
-                Assert.Equal("Description", fields.[3].Name)
-                Assert.True(fields.[3].IsNullable)
+                test <@ fields.Length = 4 @>
+                test <@ fields.[0].Name = "Id" @>
+                test <@ fields.[0].ClrType = typeof<int32> @>
+                test <@ fields.[1].Name = "Name" @>
+                test <@ fields.[1].ClrType = typeof<string> @>
+                test <@ fields.[2].Name = "Price" @>
+                test <@ fields.[2].ClrType = typeof<decimal> @>
+                test <@ fields.[3].Name = "Description" @>
+                test <@ fields.[3].IsNullable = true @>
             finally
                 if File.Exists tempFile then
                     File.Delete tempFile
@@ -72,20 +73,20 @@ type SchemaAndReaderTests() =
                 do! TestHelper.createTestParquetFile tempFile
 
                 let rows = ParquetReaderCore.loadFromFile tempFile true |> Seq.toArray
-                Assert.Equal(5, rows.Length)
+                test <@ rows.Length = 5 @>
 
                 // Row 0 checks
                 let r0 = rows.[0]
-                Assert.Equal(1, r0.GetTypedValue<int32>(0))
-                Assert.Equal("Apple", r0.GetTypedValue<string>(1))
-                Assert.Equal(1.50m, r0.GetTypedValue<decimal>(2))
-                Assert.Equal(Some "Fresh fruit", r0.GetOptionalValue<string>(3))
+                test <@ r0.GetTypedValue<int32>(0) = 1 @>
+                test <@ r0.GetTypedValue<string>(1) = "Apple" @>
+                test <@ r0.GetTypedValue<decimal>(2) = 1.50m @>
+                test <@ r0.GetOptionalValue<string>(3) = Some "Fresh fruit" @>
 
                 // Row 1 checks (null description -> None)
                 let r1 = rows.[1]
-                Assert.Equal(2, r1.GetTypedValue<int32>(0))
-                Assert.Equal("Banana", r1.GetTypedValue<string>(1))
-                Assert.Equal(None, r1.GetOptionalValue<string>(3))
+                test <@ r1.GetTypedValue<int32>(0) = 2 @>
+                test <@ r1.GetTypedValue<string>(1) = "Banana" @>
+                test <@ r1.GetOptionalValue<string>(3) = None @>
             finally
                 if File.Exists tempFile then
                     File.Delete tempFile
@@ -101,9 +102,9 @@ type SchemaAndReaderTests() =
 
                 let stream = ParquetReaderCore.loadFromFileAsync tempFile true
                 let! rows = TaskSeq.toArrayAsync stream
-                Assert.Equal(5, rows.Length)
-                Assert.Equal("Apple", rows.[0].GetTypedValue<string>(1))
-                Assert.Equal("Elderberry", rows.[4].GetTypedValue<string>(1))
+                test <@ rows.Length = 5 @>
+                test <@ rows.[0].GetTypedValue<string>(1) = "Apple" @>
+                test <@ rows.[4].GetTypedValue<string>(1) = "Elderberry" @>
             finally
                 if File.Exists tempFile then
                     File.Delete tempFile
@@ -118,13 +119,13 @@ type SchemaAndReaderTests() =
                 do! TestHelper.createTestParquetFile tempFile
 
                 let! ids = ParquetReaderCore.readColumnArrayAsync<int32> tempFile "Id"
-                Assert.Equal<int32[]>([| 1; 2; 3; 4; 5 |], ids)
+                test <@ ids = [| 1; 2; 3; 4; 5 |] @>
 
                 let! names = ParquetReaderCore.readColumnArrayAsync<string> tempFile "Name"
-                Assert.Equal<string[]>([| "Apple"; "Banana"; "Cherry"; "Date"; "Elderberry" |], names)
+                test <@ names = [| "Apple"; "Banana"; "Cherry"; "Date"; "Elderberry" |] @>
 
                 let! prices = ParquetReaderCore.readColumnArrayAsync<decimal> tempFile "Price"
-                Assert.Equal<decimal[]>([| 1.50m; 0.80m; 3.25m; 4.00m; 2.10m |], prices)
+                test <@ prices = [| 1.50m; 0.80m; 3.25m; 4.00m; 2.10m |] @>
             finally
                 if File.Exists tempFile then
                     File.Delete tempFile
@@ -137,16 +138,16 @@ type SchemaAndReaderTests() =
 
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
-            Assert.Equal(3, rows.Length)
+            test <@ rows.Length = 3 @>
 
             let r0 = rows.[0]
-            Assert.Equal(100, r0.GetTypedValue<int32>(0))
-            Assert.Equal(10000000000L, r0.GetTypedValue<int64>(1))
-            Assert.Equal(1.5f, r0.GetTypedValue<float32>(2))
-            Assert.Equal(10.12345, r0.GetTypedValue<double>(3))
-            Assert.Equal(true, r0.GetTypedValue<bool>(4))
-            Assert.Equal("Red", r0.GetTypedValue<string>(5))
-            Assert.Equal(123.45m, r0.GetTypedValue<decimal>(6))
+            test <@ r0.GetTypedValue<int32>(0) = 100 @>
+            test <@ r0.GetTypedValue<int64>(1) = 10000000000L @>
+            test <@ r0.GetTypedValue<float32>(2) = 1.5f @>
+            test <@ r0.GetTypedValue<double>(3) = 10.12345 @>
+            test <@ r0.GetTypedValue<bool>(4) = true @>
+            test <@ r0.GetTypedValue<string>(5) = "Red" @>
+            test <@ r0.GetTypedValue<decimal>(6) = 123.45m @>
 
     [<Fact>]
     member _.``ParquetReaderCore streams multi-rowgroup dataset sequentially via taskSeq``() =
@@ -157,14 +158,14 @@ type SchemaAndReaderTests() =
             if File.Exists pyarrowFile then
                 let stream = ParquetReaderCore.loadFromFileAsync pyarrowFile false
                 let! rows = TaskSeq.toArrayAsync stream
-                Assert.Equal(1000, rows.Length)
-                Assert.Equal(0, rows.[0].GetTypedValue<int32>(0))
-                Assert.Equal(999, rows.[999].GetTypedValue<int32>(0))
+                test <@ rows.Length = 1000 @>
+                test <@ rows.[0].GetTypedValue<int32>(0) = 0 @>
+                test <@ rows.[999].GetTypedValue<int32>(0) = 999 @>
 
                 let! metricCol = ParquetReaderCore.readColumnArrayAsync<double> pyarrowFile "metric"
-                Assert.Equal(1000, metricCol.Length)
-                Assert.Equal(0.0, metricCol.[0])
-                Assert.Equal(999.0 * 1.5, metricCol.[999])
+                test <@ metricCol.Length = 1000 @>
+                test <@ metricCol.[0] = 0.0 @>
+                test <@ metricCol.[999] = 999.0 * 1.5 @>
         }
 
     [<Fact>]
@@ -174,7 +175,7 @@ type SchemaAndReaderTests() =
 
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile false |> Seq.toArray
-            Assert.Empty(rows)
+            test <@ Array.isEmpty rows @>
 
     [<Fact>]
     member _.``ParquetReaderCore can ingest PyArrow generated datasets``() =
@@ -183,16 +184,16 @@ type SchemaAndReaderTests() =
 
         if File.Exists pyarrowFile then
             let rows = ParquetReaderCore.loadFromFile pyarrowFile true |> Seq.toArray
-            Assert.Equal(4, rows.Length)
+            test <@ rows.Length = 4 @>
             let r0 = rows.[0]
-            Assert.Equal(Some 10, r0.GetOptionalValue<int32>(0))
-            Assert.Equal(Some "ace", r0.GetOptionalValue<string>(1))
-            Assert.Equal(Some 500.0, r0.GetOptionalValue<double>(2))
+            test <@ r0.GetOptionalValue<int32>(0) = Some 10 @>
+            test <@ r0.GetOptionalValue<string>(1) = Some "ace" @>
+            test <@ r0.GetOptionalValue<double>(2) = Some 500.0 @>
 
             let r1 = rows.[1]
-            Assert.Equal(Some 20, r1.GetOptionalValue<int32>(0))
-            Assert.Equal(None, r1.GetOptionalValue<string>(1))
-            Assert.Equal(None, r1.GetOptionalValue<double>(2))
+            test <@ r1.GetOptionalValue<int32>(0) = Some 20 @>
+            test <@ r1.GetOptionalValue<string>(1) = None @>
+            test <@ r1.GetOptionalValue<double>(2) = None @>
 
     [<Fact>]
     member _.``ParquetRow structural equality and comparison works for FSharp collections``() =
@@ -212,9 +213,9 @@ type SchemaAndReaderTests() =
         let row1B = ParquetRow(batch2, 0)
         let row2 = ParquetRow(batch1, 1)
 
-        Assert.Equal(row1A, row1B)
-        Assert.NotEqual(row1A, row2)
+        test <@ row1A = row1B @>
+        test <@ row1A <> row2 @>
 
         // Set / distinct compatibility
         let set = Set.ofList [ row1A; row1B; row2 ]
-        Assert.Equal(2, set.Count)
+        test <@ set.Count = 2 @>
